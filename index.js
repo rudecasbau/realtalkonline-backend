@@ -13,9 +13,11 @@ const DATA_FILE = path.join(__dirname, "data.json");
 const readData = () => {
   try {
     const data = JSON.parse(fs.readFileSync(DATA_FILE, "utf8"));
-    return {
-      responses: Array.isArray(data.responses) ? data.responses : []
-    };
+   return {
+  responses: Array.isArray(data.responses) ? data.responses : [],
+  users: Array.isArray(data.users) ? data.users : []
+};
+
   } catch (error) {
     console.error("Error leyendo data.json:", error);
     return { responses: [] };
