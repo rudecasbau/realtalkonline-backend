@@ -78,20 +78,20 @@ app.post("/api/login", (req, res) => {
   const { username, password } = req.body;
   const data = readData();
 
-  // 1. Primero buscamos SOLO por el nombre de usuario
+  // 1. Buscamos al usuario por nombre
   const user = data.users.find(u => u.username === username);
-  
-  // 2. Si no encontramos al usuario, devolvemos error
+
+  // 2. Si no existe el usuario
   if (!user) {
     return res.status(400).json({ error: "El usuario no existe" });
   }
 
-  // 3. Si el usuario existe, verificamos si la contraseña COINCIDE
+  // 3. Si el usuario existe, comprobamos la contraseña
   if (user.password !== password) {
-    return res.status(400).json({ error: "Contraseña incorrecta" });
+    return res.status(400).json({ error: "Contraseña incorrecta" }); // <--- Aquí está el mensaje que querías
   }
 
-  // 4. Si llegamos aquí, usuario y contraseña son correctos
+  // 4. Todo correcto
   res.json(user);
 });
 
