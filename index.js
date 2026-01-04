@@ -18,8 +18,9 @@ const readData = () => {
   try {
     const data = JSON.parse(fs.readFileSync(DATA_FILE, "utf8"));
     return {
-      responses: Array.isArray(data.responses) ? data.responses : []
-    };
+  responses: Array.isArray(data.responses) ? data.responses : [],
+  users: Array.isArray(data.users) ? data.users : []
+};
   } catch (error) {
     console.error("Error leyendo data.json:", error);
     return { responses: [] };
@@ -50,6 +51,41 @@ app.post("/api/responses", (req, res) => {
   res.json({ ok: true });
 });
 
+// REGISTRO DE USUARIO
+app.post("/api/register", (req, res) => {
+  const { username, password } = req.body;
+  const data = readData();
+
+  // Verificar si el usuario ya existe
+  if (data.users.find(u => u.username === username)) {
+    return res.status(400).json({ error: "El usuario ya existe" });
+  }
+
+  const newUser = {
+    username,
+    password, // Nota: En un entorno real, esto debería estar encriptado
+    avatar: username[0].toUpperCase(),
+    joinDate: new Date().toLocaleDateString()
+  };
+
+  data.users.push(newUser);
+  writeData(data);
+  res.json(newUser);
+});
+
+// INICIO DE SESIÓN
+app.post("/api/login", (req, res) => {
+  const { username, password } = req.body;
+  const data = readData();
+
+  const user = data.users.find(u => u.username === username && u.password === password);
+
+  if (!user) {
+    return res.status(401).json({ error: "Credenciales incorrectas" });
+  }
+
+  res.json(user);
+});
 
 app.get("/", (req, res) => {
   res.send("Backend RealTalk funcionando");
