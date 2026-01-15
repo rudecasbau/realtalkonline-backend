@@ -16,34 +16,38 @@ app.get("/api/ping", (req, res) => {
 
 
 
-const DATA_FILE = path.join(__dirname, "data.json");
+const DATA_FILE = path.join(__dirname, 'data.json');
 
-
+// Función mejorada: si el archivo no existe, lo crea vacío en lugar de fallar
 const readData = () => {
   try {
-    const data = JSON.parse(fs.readFileSync(DATA_FILE, "utf8"));
-    return {
-  responses: Array.isArray(data.responses) ? data.responses : [],
-  users: Array.isArray(data.users) ? data.users : []
-};
+    if (!fs.existsSync(DATA_FILE)) {
+      const initialData = { users: [], responses: [] };
+      fs.writeFileSync(DATA_FILE, JSON.stringify(initialData, null, 2));
+      return initialData;
+    }
+    const content = fs.readFileSync(DATA_FILE, 'utf-8');
+    return JSON.parse(content);
   } catch (error) {
     console.error("Error leyendo data.json:", error);
-    return { responses: [] };
+    return { users: [], responses: [] };
+  }
+};
+
+const writeData = (data) => {
+  try {
+    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+  } catch (error) {
+    console.error("Error escribiendo en data.json:", error);
   }
 };
 
 
-const writeData = (data) => {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-};
 
-
-// Obtener respuestas por pregunta
+// Obtener respuestas filtradas por ID de pregunta (Actualizado para leer siempre del archivo)
 app.get("/api/responses/:qId", (req, res) => {
-  const data = readData();
-  const responses = data.responses.filter(
-    r => r.qId === req.params.qId
-  );
+  const data = readData(); // Esto asegura que cargue los likes y comentarios guardados
+  const responses = data.responses.filter(r => r.qId === req.params.qId);
   res.json(responses);
 });
 
