@@ -10,6 +10,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+app.get("/api/ping", (req, res) => {
+  res.json({ status: "ok" });
+});
+
+
 
 const DATA_FILE = path.join(__dirname, "data.json");
 
