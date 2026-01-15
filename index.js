@@ -56,23 +56,32 @@ app.post("/api/responses", (req, res) => {
   res.json({ ok: true });
 });
 
-// Guardar VOTO (Likes/Deepens)
+// Guardar VOTO (Likes/Deepens) con lógica de quitar/poner
  app.post("/api/responses/:id/vote", (req, res) => {
   const { id } = req.params;
-  const { type } = req.body; // 'likes' o 'deepens'
+  const { type, action } = req.body; // action puede ser 'add' o 'remove'
   const data = readData();
 
-  // Buscar la respuesta por id (puede ser string o número según el origen)
   const response = data.responses.find(r => r.id == id || r._id == id);
 
   if (response) {
-  response[type] = (response[type] || 0) + 1;
+  // Aseguramos que no sea negativo
+  const currentVal = response[type] || 0;
+  
+  if (action === 'remove') {
+  response[type] = Math.max(0, currentVal - 1);
+  } else {
+  response[type] = currentVal + 1;
+  }
+  
   writeData(data);
-  res.json({ ok: true });
+  res.json({ ok: true, newCount: response[type] });
   } else {
   res.status(404).json({ error: "Respuesta no encontrada" });
   }
  });
+
+
 
  // Guardar COMENTARIO
  app.post("/api/responses/:id/comment", (req, res) => {
