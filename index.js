@@ -79,58 +79,55 @@ app.post("/api/responses", async (req, res) => {
 });
 
 
+// Ruta para actualizar votos usando el _id de MongoDB
+app.post("/api/responses/:id/vote", async (req, res) => {
+  const { id } = req.params; // Este será el _id de MongoDB
+  const { type, action } = req.body; // type: 'likes' o 'deepens', action: 'add' o 'remove'
+  const increment = action === 'add' ? 1 : -1;
 
-// Guardar VOTO (Likes/Deepens) con lógica de quitar/poner
- app.post("/api/responses/:id/vote", (req, res) => {
+  try {
+    // findByIdAndUpdate busca directamente por el _id único
+    const updated = await Response.findByIdAndUpdate(
+      id,
+      { $inc: { [type]: increment } }, // $inc suma o resta automáticamente
+      { new: true } // Para que nos devuelva el documento ya actualizado
+    );
+    
+    if (!updated) return res.status(404).json({ error: "No se encontró el mensaje" });
+    
+    res.json({ ok: true, newCount: updated[type] });
+  } catch (err) {
+    console.error("Error al votar:", err);
+    res.status(500).json({ error: "Error en el servidor" });
+  }
+});
+
+
+
+
+
+
+
+// Ruta para añadir comentarios al array de un mensaje
+app.post("/api/responses/:id/comments", async (req, res) => {
   const { id } = req.params;
-  const { type, action } = req.body; // action puede ser 'add' o 'remove'
-  const data = readData();
+  const { user, content } = req.body;
 
-
-  const response = data.responses.find(r => r.id == id || r._id == id);
-
-
-  if (response) {
-  // Aseguramos que no sea negativo
-  const currentVal = response[type] || 0;
- 
-  if (action === 'remove') {
-  response[type] = Math.max(0, currentVal - 1);
-  } else {
-  response[type] = currentVal + 1;
+  try {
+    const updated = await Response.findByIdAndUpdate(
+      id,
+      { 
+        $push: { 
+          comments: { user, content, createdAt: new Date() } 
+        } 
+      },
+      { new: true }
+    );
+    res.json({ ok: true, comments: updated.comments });
+  } catch (err) {
+    res.status(500).json({ error: "No se pudo comentar" });
   }
- 
-  writeData(data);
-  res.json({ ok: true, newCount: response[type] });
-  } else {
-  res.status(404).json({ error: "Respuesta no encontrada" });
-  }
- });
-
-
-
-
-
-
- // Guardar COMENTARIO
- app.post("/api/responses/:id/comment", (req, res) => {
-  const { id } = req.params;
-  const newComment = req.body;
-  const data = readData();
-
-
-  const response = data.responses.find(r => r.id == id || r._id == id);
-
-
-  if (response) {
-  if (!response.comments) response.comments = [];
-  response.comments.push(newComment);
-  writeData(data);
-  res.json({ ok: true });
-  } else {
-  res.status(404).json({ error: "Respuesta no encontrada" });
-  }
- });
+});
 
 
 
