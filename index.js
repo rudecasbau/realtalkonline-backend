@@ -4,6 +4,29 @@ const fs = require("fs");
 const path = require("path");
 
 
+const mongoose = require('mongoose');
+
+// PEGA AQUÍ TU ENLACE: Recuerda cambiar <db_password> por tu contraseña real
+const MONGO_URI = "mongodb+srv://rudecasbau_db:NgTJIarqGa3XucUV@realtalkcluster.rfmnucr.mongodb.net/?appName=RealTalkCluster"; 
+
+mongoose.connect(MONGO_URI)
+  .then(() => console.log("✅ Conexión exitosa a MongoDB Atlas"))
+  .catch(err => console.error("❌ Error de conexión:", err));
+
+// Definimos cómo se guardarán las respuestas en la base de datos
+const responseSchema = new mongoose.Schema({
+  qId: String,
+  user: String,
+  content: String,
+  likes: { type: Number, default: 0 },
+  deepens: { type: Number, default: 0 },
+  comments: { type: Array, default: [] },
+  createdAt: { type: Date, default: Date.now }
+});
+
+const Response = mongoose.model('Response', responseSchema);
+
+
 
 
 const app = express();
@@ -20,57 +43,41 @@ app.get("/api/ping", (req, res) => {
 });
 
 
-
-
-
-
-const DATA_FILE = path.join(__dirname, "data.json");
-
-
-
-
-const readData = () => {
+// Obtener respuestas de MongoDB
+app.get("/api/responses/:qId", async (req, res) => {
   try {
-    const data = JSON.parse(fs.readFileSync(DATA_FILE, "utf8"));
-    return {
-  responses: Array.isArray(data.responses) ? data.responses : [],
-  users: Array.isArray(data.users) ? data.users : []
-};
-  } catch (error) {
-    console.error("Error leyendo data.json:", error);
-    return { responses: [] };
+    // Buscamos en la base de datos las respuestas que coincidan con el ID de la pregunta
+    const responses = await Response.find({ qId: req.params.qId }).sort({ createdAt: -1 });
+    res.json(responses);
+  } catch (err) {
+    console.error("Error al leer de MongoDB:", err);
+    res.status(500).json({ error: "No se pudieron cargar los datos" });
   }
-};
-
-
-
-
-const writeData = (data) => {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-};
-
-
-
-
-// Obtener respuestas por pregunta
-app.get("/api/responses/:qId", (req, res) => {
-  const data = readData();
-  const responses = data.responses.filter(
-    r => r.qId === req.params.qId
-  );
-  res.json(responses);
 });
 
 
 
 
-// Guardar nueva respuesta
-app.post("/api/responses", (req, res) => {
-  const data = readData();
-  data.responses.unshift(req.body);
-  writeData(data);
-  res.json({ ok: true });
+
+
+// Guardar nueva respuesta en MongoDB
+app.post("/api/responses", async (req, res) => {
+  try {
+    const newResponse = new Response({
+      qId: req.body.qId,
+      user: req.body.user,
+      content: req.body.content,
+      // Los likes y comentarios empiezan en 0 por defecto gracias al Schema
+    });
+
+    await newResponse.save(); // Esto lo guarda en la nube de MongoDB
+    res.json({ ok: true, message: "Guardado en la nube correctamente" });
+  } catch (err) {
+    console.error("Error al guardar en MongoDB:", err);
+    res.status(500).json({ error: "No se pudo guardar el mensaje" });
+  }
 });
+
 
 
 // Guardar VOTO (Likes/Deepens) con lógica de quitar/poner
