@@ -6,10 +6,8 @@ const path = require("path");
 
 const mongoose = require('mongoose');
 
-// PEGA AQUÍ TU ENLACE: Recuerda cambiar <db_password> por tu contraseña real
-const MONGO_URI = "mongodb+srv://rudecasbau_db:NgTJIarqGa3XucUV@realtalkcluster.rfmnucr.mongodb.net/?appName=RealTalkCluster"; 
 
-mongoose.connect(MONGO_URI)
+mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("✅ Conexión exitosa a MongoDB Atlas"))
   .catch(err => console.error("❌ Error de conexión:", err));
 
