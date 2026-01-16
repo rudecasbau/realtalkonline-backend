@@ -60,23 +60,22 @@ app.get("/api/responses/:qId", async (req, res) => {
 
 
 
-// Guardar nueva respuesta en MongoDB
 app.post("/api/responses", async (req, res) => {
-  try {
-    const newResponse = new Response({
-      qId: req.body.qId,
-      user: req.body.user,
-      content: req.body.content,
-      // Los likes y comentarios empiezan en 0 por defecto gracias al Schema
-    });
+  console.log("--- ¡Ha llegado una petición! ---");
+  console.log("Datos recibidos del frontend:", req.body);
 
-    await newResponse.save(); // Esto lo guarda en la nube de MongoDB
-    res.json({ ok: true, message: "Guardado en la nube correctamente" });
+  try {
+    const newResponse = new Response(req.body);
+    const savedResponse = await newResponse.save();
+    console.log("✅ Guardado con éxito en MongoDB:", savedResponse);
+    res.json({ ok: true });
   } catch (err) {
-    console.error("Error al guardar en MongoDB:", err);
-    res.status(500).json({ error: "No se pudo guardar el mensaje" });
+    console.error("❌ ERROR AL GUARDAR:", err.message);
+    res.status(500).send(err.message); 
   }
 });
+
+
 
 
 // Ruta para actualizar votos usando el _id de MongoDB
