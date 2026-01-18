@@ -131,56 +131,58 @@ app.post("/api/responses/:id/comments", async (req, res) => {
 
 
 // REGISTRO DE USUARIO
-app.post("/api/register", (req, res) => {
-  const { username, password } = req.body;
-  const data = readData();
 
+app.post("/api/register", async (req, res) => {
+  try {
+    const { username, password } = req.body;
 
-  // Verificar si el usuario ya existe
-  if (data.users.find(u => u.username === username)) {
-    return res.status(400).json({ error: "El usuario ya existe" });
+    if (!username || !password) {
+      return res.status(400).json({ error: "Faltan datos" });
+    }
+
+    const existingUser = await User.findOne({ username });
+    if (existingUser) {
+      return res.status(400).json({ error: "Usuario ya existe" });
+    }
+
+    const newUser = new User({ username, password });
+    await newUser.save();
+
+    res.json({ ok: true, username });
+  } catch (err) {
+    console.error("REGISTER ERROR:", err);
+    res.status(500).json({ error: "Error interno del servidor" });
   }
-
-
-  const newUser = {
-    username,
-    password, // Nota: En un entorno real, esto debería estar encriptado
-    avatar: username[0].toUpperCase(),
-    joinDate: new Date().toLocaleDateString()
-  };
-
-
-  data.users.push(newUser);
-  writeData(data);
-  res.json(newUser);
 });
+
 
 
 // INICIO DE SESIÓN
-app.post("/api/login", (req, res) => {
-  const { username, password } = req.body;
-  const data = readData();
+app.post("/api/login", async (req, res) => {
+  try {
+    const { username, password } = req.body;
 
+    if (!username || !password) {
+      return res.status(400).json({ error: "Faltan datos" });
+    }
 
-  // 1. Buscamos al usuario por nombre
-  const user = data.users.find(u => u.username === username);
+    const user = await User.findOne({ username });
 
+    if (!user) {
+      return res.status(401).json({ error: "Usuario no existe" });
+    }
 
-  // 2. Si no existe el usuario
-  if (!user) {
-    return res.status(400).json({ error: "El usuario no existe" });
+    if (user.password !== password) {
+      return res.status(401).json({ error: "Contraseña incorrecta" });
+    }
+
+    res.json({ ok: true, username });
+  } catch (err) {
+    console.error("LOGIN ERROR:", err);
+    res.status(500).json({ error: "Error interno del servidor" });
   }
-
-
-  // 3. Si el usuario existe, comprobamos la contraseña
-  if (user.password !== password) {
-    return res.status(400).json({ error: "Contraseña incorrecta" }); // <--- Aquí está el mensaje que querías
-  }
-
-
-  // 4. Todo correcto
-  res.json(user);
 });
+
 
 
 app.get("/", (req, res) => {
