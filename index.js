@@ -3,7 +3,7 @@ const cors = require("cors");
 const mongoose = require('mongoose');
 const fs = require("fs");
 const path = require("path");
-const User = require("./models/User_temp");
+const User = require("./models/User");
 require("dotenv").config();
 
 
