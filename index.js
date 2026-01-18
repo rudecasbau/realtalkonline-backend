@@ -13,17 +13,7 @@ mongoose.connect(process.env.MONGO_URI)
   .catch(err => console.error("❌ Error de conexión:", err));
 
 // Definimos cómo se guardarán las respuestas en la base de datos
-const responseSchema = new mongoose.Schema({
-  qId: String,
-  user: String,
-  content: String,
-  likes: { type: Number, default: 0 },
-  deepens: { type: Number, default: 0 },
-  comments: { type: Array, default: [] },
-  createdAt: { type: Date, default: Date.now }
-});
-
-const Response = mongoose.model('Response', responseSchema);
+const Response = require("./models/Response");
 
 
 
@@ -78,7 +68,7 @@ app.post("/api/responses", async (req, res) => {
 
 
 // Ruta para actualizar votos usando el _id de MongoDB
-app.post("/api/responses/:id/vote", async (req, res) => {
+app.post("/api/responses/:resId/vote", async (req, res) => {
   const { id } = req.params; // Este será el _id de MongoDB
   const { type, action } = req.body; // type: 'likes' o 'deepens', action: 'add' o 'remove'
   const increment = action === 'add' ? 1 : -1;
@@ -107,7 +97,7 @@ app.post("/api/responses/:id/vote", async (req, res) => {
 
 
 // Ruta para añadir comentarios al array de un mensaje
-app.post("/api/responses/:id/comments", async (req, res) => {
+app.post("/api/responses/:resId/comments", async (req, res) => {
   const { id } = req.params;
   const { user, content } = req.body;
 
