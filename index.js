@@ -57,7 +57,7 @@ app.post("/api/responses", async (req, res) => {
     const newResponse = new Response(req.body);
     const savedResponse = await newResponse.save();
     console.log("✅ Guardado con éxito en MongoDB:", savedResponse);
-    res.json({ ok: true });
+    res.json(savedResponse);
   } catch (err) {
     console.error("❌ ERROR AL GUARDAR:", err.message);
     res.status(500).send(err.message); 
