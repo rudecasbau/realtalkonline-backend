@@ -69,20 +69,17 @@ app.post("/api/responses", async (req, res) => {
 
 // Ruta para actualizar votos usando el _id de MongoDB
 app.post("/api/responses/:resId/vote", async (req, res) => {
-  const { id } = req.params; // Este será el _id de MongoDB
-  const { type, action } = req.body; // type: 'likes' o 'deepens', action: 'add' o 'remove'
+  const { resId } = req.params;
+  const { type, action } = req.body;
   const increment = action === 'add' ? 1 : -1;
 
   try {
-    // findByIdAndUpdate busca directamente por el _id único
     const updated = await Response.findByIdAndUpdate(
-      id,
-      { $inc: { [type]: increment } }, // $inc suma o resta automáticamente
-      { new: true } // Para que nos devuelva el documento ya actualizado
+      resId,
+      { $inc: { [type]: increment } },
+      { new: true }
     );
-    
     if (!updated) return res.status(404).json({ error: "No se encontró el mensaje" });
-    
     res.json({ ok: true, newCount: updated[type] });
   } catch (err) {
     console.error("Error al votar:", err);
@@ -96,26 +93,26 @@ app.post("/api/responses/:resId/vote", async (req, res) => {
 
 
 
+
 // Ruta para añadir comentarios al array de un mensaje
 app.post("/api/responses/:resId/comments", async (req, res) => {
-  const { id } = req.params;
+  const { resId } = req.params;
   const { user, content } = req.body;
 
   try {
     const updated = await Response.findByIdAndUpdate(
-      id,
-      { 
-        $push: { 
-          comments: { user, content, createdAt: new Date() } 
-        } 
-      },
+      resId,
+      { $push: { comments: { user, content, createdAt: new Date() } } },
       { new: true }
     );
     res.json({ ok: true, comments: updated.comments });
   } catch (err) {
+    console.error("Error al comentar:", err);
     res.status(500).json({ error: "No se pudo comentar" });
   }
 });
+
+
 
 
 
