@@ -65,6 +65,24 @@ app.post("/api/responses", async (req, res) => {
 });
 
 
+app.delete("/api/admin/responses/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const adminKey = req.headers.adminkey;
+
+    if (adminKey !== process.env.ADMIN_KEY) {
+      return res.status(403).json({ error: "No autorizado" });
+    }
+
+    await Response.findByIdAndDelete(id);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: "Error al borrar" });
+  }
+});
+
+
+
 
 
 // Ruta para actualizar votos usando el _id de MongoDB
