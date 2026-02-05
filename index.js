@@ -112,21 +112,60 @@ app.post("/api/responses/:resId/vote", async (req, res) => {
 
 
 
-// Ruta para añadir comentarios al array de un mensaje
+// Añadir comentario a una respuesta
 app.post("/api/responses/:resId/comments", async (req, res) => {
   const { resId } = req.params;
   const { user, content } = req.body;
 
+  if (!user || !content) {
+    return res.status(400).json({ error: "Faltan datos" });
+  }
+
   try {
     const updated = await Response.findByIdAndUpdate(
       resId,
-      { $push: { comments: { user, content, createdAt: new Date() } } },
+      {
+        $push: {
+          comments: {
+            user,
+            content,
+            createdAt: new Date()
+          }
+        }
+      },
       { new: true }
     );
+
+    if (!updated) {
+      return res.status(404).json({ error: "Respuesta no encontrada" });
+    }
+
     res.json({ ok: true, comments: updated.comments });
   } catch (err) {
-    console.error("Error al comentar:", err);
-    res.status(500).json({ error: "No se pudo comentar" });
+    console.error("Error al guardar comentario:", err);
+    res.status(500).json({ error: "No se pudo guardar comentario" });
+  }
+});
+
+// Borrar comentario (admin)
+app.delete("/api/admin/responses/:resId/comments/:commentId", async (req, res) => {
+  try {
+    const adminKey = req.headers.adminkey;
+
+    if (adminKey !== process.env.ADMIN_KEY) {
+      return res.status(403).json({ error: "No autorizado" });
+    }
+
+    const { resId, commentId } = req.params;
+
+    await Response.findByIdAndUpdate(resId, {
+      $pull: { comments: { _id: commentId } }
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Error borrando comentario:", err);
+    res.status(500).json({ error: "Error al borrar comentario" });
   }
 });
 
