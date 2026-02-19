@@ -1,42 +1,52 @@
 const express = require("express");
 const cors = require("cors");
-const mongoose = require('mongoose');
-const fs = require("fs");
-const path = require("path");
-const User = require("./models/User");
+const mongoose = require("mongoose");
 require("dotenv").config();
 
-
-
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ Conexión exitosa a MongoDB Atlas"))
-  .catch(err => console.error("❌ Error de conexión:", err));
-
-// Definimos cómo se guardarán las respuestas en la base de datos
+const User = require("./models/User");
 const Response = require("./models/Response");
-
-
-
 
 const app = express();
 
 
+// =======================
+// CONEXIÓN A MONGODB
+// =======================
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => console.log("✅ Conexión exitosa a MongoDB Atlas"))
+  .catch((err) => console.error("❌ Error de conexión:", err));
 
 
+// =======================
+// MIDDLEWARES
+// =======================
 app.use(cors());
 app.use(express.json());
 
 
+// =======================
+// RUTAS BÁSICAS
+// =======================
 app.get("/api/ping", (req, res) => {
   res.json({ status: "ok" });
 });
 
+app.get("/", (req, res) => {
+  res.send("Backend RealTalk funcionando");
+});
 
-// Obtener respuestas de MongoDB
+
+// =======================
+// RESPUESTAS
+// =======================
+
+// Obtener respuestas por ID de pregunta
 app.get("/api/responses/:qId", async (req, res) => {
   try {
-    // Buscamos en la base de datos las respuestas que coincidan con el ID de la pregunta
-    const responses = await Response.find({ qId: req.params.qId }).sort({ createdAt: -1 });
+    const responses = await Response.find({ qId: req.params.qId })
+      .sort({ createdAt: -1 });
+
     res.json(responses);
   } catch (err) {
     console.error("Error al leer de MongoDB:", err);
@@ -44,27 +54,19 @@ app.get("/api/responses/:qId", async (req, res) => {
   }
 });
 
-
-
-
-
-
+// Crear nueva respuesta
 app.post("/api/responses", async (req, res) => {
-  console.log("--- ¡Ha llegado una petición! ---");
-  console.log("Datos recibidos del frontend:", req.body);
-
   try {
     const newResponse = new Response(req.body);
     const savedResponse = await newResponse.save();
-    console.log("✅ Guardado con éxito en MongoDB:", savedResponse);
     res.json(savedResponse);
   } catch (err) {
     console.error("❌ ERROR AL GUARDAR:", err.message);
-    res.status(500).send(err.message); 
+    res.status(500).json({ error: "Error al guardar" });
   }
 });
 
-
+// Borrar respuesta (admin)
 app.delete("/api/admin/responses/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -81,15 +83,11 @@ app.delete("/api/admin/responses/:id", async (req, res) => {
   }
 });
 
-
-
-
-
-// Ruta para actualizar votos usando el _id de MongoDB
+// Votar respuesta
 app.post("/api/responses/:resId/vote", async (req, res) => {
   const { resId } = req.params;
   const { type, action } = req.body;
-  const increment = action === 'add' ? 1 : -1;
+  const increment = action === "add" ? 1 : -1;
 
   try {
     const updated = await Response.findByIdAndUpdate(
@@ -97,7 +95,11 @@ app.post("/api/responses/:resId/vote", async (req, res) => {
       { $inc: { [type]: increment } },
       { new: true }
     );
-    if (!updated) return res.status(404).json({ error: "No se encontró el mensaje" });
+
+    if (!updated) {
+      return res.status(404).json({ error: "No se encontró el mensaje" });
+    }
+
     res.json({ ok: true, newCount: updated[type] });
   } catch (err) {
     console.error("Error al votar:", err);
@@ -105,14 +107,7 @@ app.post("/api/responses/:resId/vote", async (req, res) => {
   }
 });
 
-
-
-
-
-
-
-
-// Añadir comentario a una respuesta
+// Añadir comentario
 app.post("/api/responses/:resId/comments", async (req, res) => {
   const { resId } = req.params;
   const { user, content } = req.body;
@@ -129,9 +124,9 @@ app.post("/api/responses/:resId/comments", async (req, res) => {
           comments: {
             user,
             content,
-            createdAt: new Date()
-          }
-        }
+            createdAt: new Date(),
+          },
+        },
       },
       { new: true }
     );
@@ -147,37 +142,12 @@ app.post("/api/responses/:resId/comments", async (req, res) => {
   }
 });
 
-// Borrar comentario (admin)
-app.delete("/api/admin/responses/:resId/comments/:commentId", async (req, res) => {
-  try {
-    const adminKey = req.headers.adminkey;
 
-    if (adminKey !== process.env.ADMIN_KEY) {
-      return res.status(403).json({ error: "No autorizado" });
-    }
+// =======================
+// AUTENTICACIÓN
+// =======================
 
-    const { resId, commentId } = req.params;
-
-    await Response.findByIdAndUpdate(resId, {
-      $pull: { comments: { _id: commentId } }
-    });
-
-    res.json({ ok: true });
-  } catch (err) {
-    console.error("Error borrando comentario:", err);
-    res.status(500).json({ error: "Error al borrar comentario" });
-  }
-});
-
-
-
-
-
-
-
-
-// REGISTRO DE USUARIO
-
+// Registro
 app.post("/api/register", async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -187,23 +157,32 @@ app.post("/api/register", async (req, res) => {
     }
 
     const existingUser = await User.findOne({ username });
+
     if (existingUser) {
       return res.status(400).json({ error: "Usuario ya existe" });
     }
 
-    const newUser = new User({ username, password });
+    const newUser = new User({
+      username,
+      password,
+      avatar: "🙂" // avatar por defecto
+    });
+
     await newUser.save();
 
-    res.json({ ok: true, username });
+    res.json({
+      ok: true,
+      username: newUser.username,
+      avatar: newUser.avatar
+    });
+
   } catch (err) {
     console.error("REGISTER ERROR:", err);
     res.status(500).json({ error: "Error interno del servidor" });
   }
 });
 
-
-
-// INICIO DE SESIÓN
+// Login
 app.post("/api/login", async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -222,23 +201,55 @@ app.post("/api/login", async (req, res) => {
       return res.status(401).json({ error: "Contraseña incorrecta" });
     }
 
-    res.json({ ok: true, username });
+    res.json({
+      ok: true,
+      username: user.username,
+      avatar: user.avatar
+    });
+
   } catch (err) {
     console.error("LOGIN ERROR:", err);
     res.status(500).json({ error: "Error interno del servidor" });
   }
 });
 
+// Actualizar avatar
+app.put("/api/users/:username/avatar", async (req, res) => {
+  const { username } = req.params;
+  const { avatar } = req.body;
 
+  if (!avatar) {
+    return res.status(400).json({ error: "Falta el avatar" });
+  }
 
-app.get("/", (req, res) => {
-  res.send("Backend RealTalk funcionando");
+  try {
+    const updatedUser = await User.findOneAndUpdate(
+      { username },
+      { avatar },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
+    }
+
+    res.json({
+      ok: true,
+      avatar: updatedUser.avatar
+    });
+
+  } catch (err) {
+    console.error("Error actualizando avatar:", err);
+    res.status(500).json({ error: "Error en el servidor" });
+  }
 });
 
 
-
-
+// =======================
+// SERVIDOR
+// =======================
 const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, () => {
   console.log("Backend activo en puerto", PORT);
 });
